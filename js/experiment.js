@@ -23,6 +23,8 @@ function getUrlParam(param) {
 }
 
 const PARTICIPANT_ID = getUrlParam('prolific_pid') || getUrlParam('participantId') || "ANON_" + Math.floor(Math.random() * 999999);
+const STUDY_ID = getUrlParam('study_id') || "NONE";
+const SESSION_ID = getUrlParam('session_id') || "NONE";
 
 /**
  * Main Study Flow
@@ -58,8 +60,27 @@ async function runExperiment() {
   setRandomSeed(Math.floor(Math.random() * 2147483647));
   shuffle(activeRulesPool);
 
+  let experimentStartTime = 0;
+
   const timeline = [];
   timeline.push({ type: jsPsychPreload, images: ALL_ITEMS.map(item => `stimuli/${item.id}.svg`) });
+
+  // 0. INSTRUCTIONS SCREEN (Placeholder)
+  timeline.push({
+    type: jsPsychHtmlButtonResponse,
+    stimulus: `
+      <div class="instructions-text" style="max-width: 800px; margin: 0 auto; text-align: left; line-height: 1.6;">
+        <h1 style="text-align: center;">Study Instructions</h1>
+        <p>This is where your instructions go. You can explain how categories work and how to select items.</p>
+        <div style="background: #fff9c4; padding: 15px; border-radius: 8px; border-left: 5px solid #fbc02d;">
+            <strong>Reminder:</strong> Please pay close attention to the examples provided in each trial.
+        </div>
+        <p>Click the button below when you are ready to begin.</p>
+      </div>
+    `,
+    choices: ['Begin Task'],
+    on_load: () => { experimentStartTime = performance.now(); }
+  });
 
   timeline.push({
     type: jsPsychHtmlButtonResponse,
@@ -124,6 +145,7 @@ async function runExperiment() {
         if (btn) {
           btn.disabled = true;
           btn.style.opacity = "0.4";
+          btn.style.pointerEvents = "none";
         }
 
         window.toggleSelection = (el) => {
@@ -196,10 +218,13 @@ async function runExperiment() {
     on_load: async () => {
       const cleanedPackage = {
         participant_id: PARTICIPANT_ID,
+        study_id: STUDY_ID,
+        session_id: SESSION_ID,
         timestamp: new Date().toISOString(),
         device: navigator.userAgent,
         overall_accuracy: masterTrialData.reduce((acc, val) => acc + val.accuracy, 0) / masterTrialData.length,
         overall_rt: masterTrialData.reduce((acc, val) => acc + val.test_rt, 0),
+        total_duration_sec: (performance.now() - experimentStartTime) / 1000,
         trials: masterTrialData
       };
 

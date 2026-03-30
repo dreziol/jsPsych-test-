@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Researcher Dashboard | Category Learning</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="css/style.css">
     <style>
         :root {
@@ -148,27 +149,27 @@
 
         th:nth-child(1),
         td:nth-child(1) {
-            width: 18%;
+            width: 14%;
             font-family: monospace;
             font-weight: bold;
         }
 
         th:nth-child(2),
         td:nth-child(2) {
-            width: 18%;
+            width: 16%;
             color: #666;
             font-size: 0.8rem;
         }
 
         th:nth-child(3),
         td:nth-child(3) {
-            width: 8%;
+            width: 5%;
             text-align: center;
         }
 
         th:nth-child(4),
         td:nth-child(4) {
-            width: 12%;
+            width: 8%;
             text-align: center;
             font-weight: bold;
         }
@@ -195,6 +196,12 @@
             text-align: center;
         }
 
+        th:nth-child(8),
+        td:nth-child(8) {
+            width: 23%;
+            text-align: center;
+        }
+
         .load-more-container {
             text-align: center;
             padding: 30px 0;
@@ -214,8 +221,9 @@
 
     <div class="admin-container" id="main-dashboard" style="display: none;">
         <div class="dashboard-header">
-            <div>
-                <h1>Research Control Center <span id="status-badge" class="db-badge status-on">ONLINE</span></h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <img src="favicon.png" alt="Logo" style="width: 50px; height: 50px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                <h1 style="margin: 0;">Research Control Center <span id="status-badge" class="db-badge status-on">ONLINE</span></h1>
             </div>
             <button class="jspsych-btn" style="background: #e74c3c !important;"
                 onclick="window.location.href='index.html'">Logout to Test Site</button>
@@ -263,6 +271,7 @@
                         <th>Acc.</th>
                         <th>TOTAL TEST (s)</th>
                         <th>TOTAL STUDY (s)</th>
+                        <th>EXP. DUR.</th>
                         <th>Device</th>
                     </tr>
                 </thead>
@@ -371,6 +380,7 @@
                     <td style="color: ${acc > 70 ? 'var(--success)' : '#e67e22'}">${acc}%</td>
                     <td>${testSec}</td>
                     <td>${totalStudySec}</td>
+                    <td><b>${(data.total_duration_sec || 0).toFixed(1)}s</b></td>
                     <td><small>${deviceLabel}</small></td>
                 </tr>
             `;
@@ -394,11 +404,30 @@
         };
 
         window.doExport = () => {
-            const h = ["participant_id", "timestamp", "device", "rule_id", "accuracy", "test_rt", "learning_rt", "examples", "tests", "responses"];
+            const h = ["participant_id", "study_id", "session_id", "timestamp", "device", "total_duration", "rule_id", "accuracy", "test_rt", "learning_rt", "examples", "tests", "responses"];
             const rows = [];
             allParticipants.forEach(p => {
                 if (p.trials) p.trials.forEach(t => {
-                    rows.push([p.participant_id, p.timestamp, `"${p.device || 'unk'}"`, t.rule_id, (t.accuracy || 0).toFixed(2), t.test_rt || t.rt || 0, t.learning_rt || 0, t.example_items, t.test_items_list, t.participant_responses]);
+                    const formatField = (val) => Array.isArray(val) ? val.join('|') : (val || "OLD_DATA");
+                    const examples = formatField(t.example_items);
+                    const tests = formatField(t.test_items_list);
+                    const responses = Array.isArray(t.participant_responses) ? t.participant_responses.join('|') : ((t.participant_responses === undefined || t.participant_responses === "") ? "NO_RESPONSE" : t.participant_responses);
+                    
+                    rows.push([
+                        p.participant_id,
+                        p.study_id || "NONE",
+                        p.session_id || "NONE",
+                        p.timestamp, 
+                        `"${p.device || 'unk'}"`, 
+                        (p.total_duration_sec || 0).toFixed(2),
+                        t.rule_id, 
+                        (t.accuracy !== undefined ? t.accuracy : 0).toFixed(2), 
+                        t.test_rt || t.rt || 0, 
+                        t.learning_rt || 0, 
+                        examples, 
+                        tests, 
+                        responses
+                    ]);
                 });
             });
             const csv = h.join(',') + "\n" + rows.map(r => r.join(',')).join('\n');
