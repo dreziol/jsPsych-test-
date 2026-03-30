@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A browser-based interactive research experiment for category learning and rule inference studies. Built with jsPsych.">
+    <title>Interactive Research Experiment | Category Learning Study</title>
+    
+    <script src="https://unpkg.com/jspsych@7.3.4"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-button-response@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-preload@1.1.3"></script>
+    <script src="https://unpkg.com/@jspsych-contrib/plugin-pipe"></script>
+    <link href="https://unpkg.com/jspsych@7.3.4/css/jspsych.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="css/style.css">
+    
+    <script type="module" src="js/experiment.js?v=5"></script>
+</head>
+<body>
+    <div id="jspsych-target"></div>
+
+    <!-- PERSISTENT ADMIN GATEWAY SCRIPT -->
+    <script>
+        (function() {
+            function createAdminButton() {
+                if (document.getElementById('admin-forced-btn')) return;
+                
+                const btn = document.createElement('a');
+                btn.id = 'admin-forced-btn';
+                btn.href = 'admin.html';
+                btn.innerText = 'Admin Portal';
+                btn.style.cssText = `
+                    position: fixed !important;
+                    top: 15px !important;
+                    right: 15px !important;
+                    z-index: 2147483647 !important;
+                    background: #2c3e50 !important;
+                    color: #ffffff !important;
+                    padding: 10px 20px !important;
+                    border-radius: 8px !important;
+                    text-decoration: none !important;
+                    font-weight: bold !important;
+                    font-family: sans-serif !important;
+                    font-size: 14px !important;
+                    border: 2px solid white !important;
+                    box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
+                    display: block !important;
+                    cursor: pointer !important;
+                    pointer-events: auto !important;
+                    opacity: 1 !important;
+                `;
+                document.body.appendChild(btn);
+                console.log("LOG: Admin Portal Button Force-Injected.");
+            }
+
+            // Run immediately and then keep ensuring it's there
+            window.addEventListener('load', createAdminButton);
+            setInterval(createAdminButton, 1000);
+            createAdminButton();
+        })();
+    </script>
+</body>
+</html>

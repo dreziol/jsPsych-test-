@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Researcher Dashboard | Category Learning</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --accent: #3498db;
+            --success: #27ae60;
+            --bg: #f4f7f9;
+        }
+
+        body {
+            background: var(--bg);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+        }
+
+        .admin-container {
+            max-width: 1400px;
+            width: 95%;
+            margin: 40px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.05);
+        }
+
+        .dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: #fff;
+            border: 1px solid #e1e8f0;
+            padding: 15px 25px;
+            border-radius: 10px;
+            flex: 1;
+        }
+
+        .stat-card h4 {
+            margin: 0;
+            font-size: 0.8rem;
+            color: #7f8c8d;
+            text-transform: uppercase;
+        }
+
+        .stat-card p {
+            margin: 5px 0 0;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .rule-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .rule-card {
+            background: #fff;
+            padding: 15px;
+            border: 1px solid #eef2f7;
+            border-radius: 10px;
+            display: flex;
+            align-items: start;
+            gap: 12px;
+        }
+
+        #auth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--primary);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            color: white;
+        }
+
+        #passphrase-input {
+            padding: 15px;
+            border-radius: 8px;
+            border: none;
+            width: 300px;
+            margin: 20px 0;
+            text-align: center;
+            font-size: 1.2rem;
+        }
+
+        .db-badge {
+            font-size: 0.7rem;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+
+        .status-on {
+            background: #55efc4;
+            color: #00b894;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            table-layout: fixed;
+        }
+
+        th {
+            background: #f8f9fa;
+            padding: 15px;
+            text-align: left;
+            border-bottom: 2px solid #eee;
+            color: #7f8c8d;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+        }
+
+        td {
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
+            word-wrap: break-word;
+            font-size: 0.9rem;
+        }
+
+        th:nth-child(1),
+        td:nth-child(1) {
+            width: 18%;
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        th:nth-child(2),
+        td:nth-child(2) {
+            width: 18%;
+            color: #666;
+            font-size: 0.8rem;
+        }
+
+        th:nth-child(3),
+        td:nth-child(3) {
+            width: 8%;
+            text-align: center;
+        }
+
+        th:nth-child(4),
+        td:nth-child(4) {
+            width: 12%;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        th:nth-child(5),
+        td:nth-child(5) {
+            width: 12%;
+            text-align: center;
+            color: #34495e;
+            font-weight: bold;
+        }
+
+        th:nth-child(6),
+        td:nth-child(6) {
+            width: 12%;
+            text-align: center;
+            color: #2980b9;
+            font-weight: bold;
+        }
+
+        th:nth-child(7),
+        td:nth-child(7) {
+            width: 10%;
+            text-align: center;
+        }
+
+        .load-more-container {
+            text-align: center;
+            padding: 30px 0;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="auth-overlay">
+        <h1>Researcher Access</h1>
+        <p>Dashboard Security Protection</p>
+        <input type="password" id="passphrase-input" placeholder="Passphrase">
+        <button class="jspsych-btn" onclick="checkAuth()">Open Dashboard</button>
+        <p id="auth-error" style="color: #ff7675; margin-top: 15px; display: none;">Invalid Passphrase</p>
+    </div>
+
+    <div class="admin-container" id="main-dashboard" style="display: none;">
+        <div class="dashboard-header">
+            <div>
+                <h1>Research Control Center <span id="status-badge" class="db-badge status-on">ONLINE</span></h1>
+            </div>
+            <button class="jspsych-btn" style="background: #e74c3c !important;"
+                onclick="window.location.href='index.html'">Logout to Test Site</button>
+        </div>
+
+        <div class="stats-bar">
+            <div class="stat-card">
+                <h4>Active Rules</h4>
+                <p id="st-rules">0 / 0</p>
+            </div>
+            <div class="stat-card">
+                <h4>Total Participants</h4>
+                <p id="st-parts">0</p>
+            </div>
+            <div class="stat-card">
+                <h4>Avg Precision</h4>
+                <p id="st-acc">0%</p>
+            </div>
+        </div>
+
+        <section class="config-section">
+            <h2>Rule Subset Configuration</h2>
+            <div class="rule-grid" id="rules-list">Initializing...</div>
+            <br>
+            <button class="jspsych-btn" onclick="window.saveConfig()">Save & Sync Cloud</button>
+            <span id="save-msg" style="color: var(--success); font-weight: bold; margin-left: 15px;"></span>
+        </section>
+
+        <section class="results-section" style="margin-top: 50px;">
+            <div style="display: flex; justify-content: space-between; align-items: end; margin-bottom: 20px;">
+                <div style="flex: 1;">
+                    <h2>Participant Results</h2>
+                    <input type="text" id="search-input" placeholder="Search IDs..." onkeyup="window.doSearch()"
+                        style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
+                </div>
+                <button class="jspsych-btn" style="background: var(--success) !important; margin-left: 20px;"
+                    onclick="window.doExport()">Download Master CSV</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Timestamp</th>
+                        <th>Trials</th>
+                        <th>Acc.</th>
+                        <th>TOTAL TEST (s)</th>
+                        <th>TOTAL STUDY (s)</th>
+                        <th>Device</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body"></tbody>
+            </table>
+            <div class="load-more-container">
+                <button id="load-more-btn" class="jspsych-btn"
+                    style="background: #eee !important; color: #333 !important; border: 1px solid #ccc !important;"
+                    onclick="window.loadMore()">Load More Records</button>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const CODE = "1";
+        window.isDashboardUnlocked = false;
+        function checkAuth() {
+            if (document.getElementById('passphrase-input').value === CODE) {
+                document.getElementById('auth-overlay').style.display = 'none';
+                document.getElementById('main-dashboard').style.display = 'block';
+                window.isDashboardUnlocked = true;
+                if (window.startSync) window.startSync();
+            } else { document.getElementById('auth-error').style.display = 'block'; }
+        }
+    </script>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, query, limit, orderBy, startAfter } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { RULES_DB } from './js/rules.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCMxzpCz9cZhPm_iR_-QqLYarTM6GEQalc",
+            authDomain: "test-75c1d.firebaseapp.com",
+            projectId: "test-75c1d",
+            storageBucket: "test-75c1d.firebasestorage.app",
+            messagingSenderId: "710473477441",
+            appId: "1:710473477441:web:062998efdc8f3dae49c5c0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        let allParticipants = [];
+        let lastDoc = null;
+
+        window.startSync = async function () {
+            if (!window.isDashboardUnlocked) return;
+            try {
+                const cfg = await getDoc(doc(db, "settings", "experiment_config"));
+                const active = (cfg.exists() && cfg.data().active_rules) ? cfg.data().active_rules : RULES_DB.map(r => r.id);
+                document.getElementById('rules-list').innerHTML = RULES_DB.map(rule => `
+                    <div class="rule-card">
+                        <input type="checkbox" class="r-check" value="${rule.id}" ${active.includes(rule.id) ? 'checked' : ''} onchange="window.reCount()">
+                        <div><strong>${rule.id}</strong><br><small>${rule.name}</small></div>
+                    </div>
+                `).join('');
+                document.getElementById('st-rules').innerText = `${active.length} / ${RULES_DB.length}`;
+                await window.loadMore(true);
+            } catch (err) { console.error(err); }
+        };
+
+        window.loadMore = async function (isInitial = false) {
+            if (isInitial) {
+                document.getElementById('results-body').innerHTML = "";
+                allParticipants = [];
+                lastDoc = null;
+            }
+            let q = query(collection(db, "results"), orderBy("timestamp", "desc"), limit(50));
+            if (lastDoc) q = query(collection(db, "results"), orderBy("timestamp", "desc"), startAfter(lastDoc), limit(50));
+            const snap = await getDocs(q);
+            if (snap.empty) {
+                document.getElementById('load-more-btn').innerText = "No More Records";
+                document.getElementById('load-more-btn').disabled = true;
+                return;
+            }
+            lastDoc = snap.docs[snap.docs.length - 1];
+            snap.forEach(d => {
+                const data = d.data();
+                allParticipants.push(data);
+                renderRow(data);
+            });
+            updateStats();
+        };
+
+        function renderRow(data) {
+            const body = document.getElementById('results-body');
+            const acc = (data.overall_accuracy !== undefined) ? (data.overall_accuracy * 100).toFixed(1) : "0.0";
+
+            // Total Test RT (Sum of all trials or use pre-calculated overall_rt)
+            const testSec = ((data.overall_rt || 0) / 1000).toFixed(1) + "s";
+
+            // Total Learning/Study RT
+            let totalStudySec = "0.0s";
+            if (data.trials) {
+                const sumMs = data.trials.reduce((acc, t) => acc + (t.learning_rt || 0), 0);
+                totalStudySec = (sumMs / 1000).toFixed(1) + "s";
+            }
+
+            const deviceLabel = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(data.device || "") ? "📱 Mob" : "💻 Desk";
+
+            body.innerHTML += `
+                <tr>
+                    <td>${data.participant_id}</td>
+                    <td>${new Date(data.timestamp).toLocaleString()}</td>
+                    <td>${data.trials ? data.trials.length : 0}</td>
+                    <td style="color: ${acc > 70 ? 'var(--success)' : '#e67e22'}">${acc}%</td>
+                    <td>${testSec}</td>
+                    <td>${totalStudySec}</td>
+                    <td><small>${deviceLabel}</small></td>
+                </tr>
+            `;
+        }
+
+        window.reCount = () => {
+            const num = document.querySelectorAll('.r-check:checked').length;
+            document.getElementById('st-rules').innerText = `${num} / ${RULES_DB.length}`;
+        };
+
+        window.saveConfig = async () => {
+            const ids = Array.from(document.querySelectorAll('.r-check:checked')).map(c => c.value);
+            await setDoc(doc(db, "settings", "experiment_config"), { active_rules: ids });
+            document.getElementById('save-msg').innerText = "✓ Synced";
+            setTimeout(() => document.getElementById('save-msg').innerText = "", 2000);
+        };
+
+        window.doSearch = () => {
+            const t = document.getElementById('search-input').value.toLowerCase();
+            document.querySelectorAll('#results-body tr').forEach(r => r.style.display = r.innerText.toLowerCase().includes(t) ? '' : 'none');
+        };
+
+        window.doExport = () => {
+            const h = ["participant_id", "timestamp", "device", "rule_id", "accuracy", "test_rt", "learning_rt", "examples", "tests", "responses"];
+            const rows = [];
+            allParticipants.forEach(p => {
+                if (p.trials) p.trials.forEach(t => {
+                    rows.push([p.participant_id, p.timestamp, `"${p.device || 'unk'}"`, t.rule_id, (t.accuracy || 0).toFixed(2), t.test_rt || t.rt || 0, t.learning_rt || 0, t.example_items, t.test_items_list, t.participant_responses]);
+                });
+            });
+            const csv = h.join(',') + "\n" + rows.map(r => r.join(',')).join('\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+            const a = document.createElement('a'); a.download = 'results.csv'; a.href = URL.createObjectURL(blob); a.click();
+        };
+
+        function updateStats() {
+            document.getElementById('st-parts').innerText = allParticipants.length;
+            const valid = allParticipants.filter(p => p.overall_accuracy !== undefined);
+            if (valid.length > 0) {
+                const avg = (valid.reduce((s, p) => s + p.overall_accuracy, 0) / valid.length * 100).toFixed(1);
+                document.getElementById('st-acc').innerText = avg + "%";
+            }
+        }
+
+        if (window.isDashboardUnlocked) window.startSync();
+    </script>
+</body>
+
+</html>

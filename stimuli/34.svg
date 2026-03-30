@@ -1,0 +1,13 @@
+
+    <svg width="120" height="120" viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg">
+      
+      <defs>
+        <pattern id="pattern-34" patternUnits="userSpaceOnUse" width="12" height="12" patternTransform="rotate(45)">
+          <rect width="12" height="12" fill="#3498db" />
+          <rect width="6" height="12" fill="white" fill-opacity="0.4" />
+        </pattern>
+      </defs>
+    
+      <polygon points="60,35 85,60 60,85 35,60" fill="url(#pattern-34)" stroke="#333" stroke-width="2" />
+    </svg>
+  
