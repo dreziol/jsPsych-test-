@@ -130,77 +130,24 @@
             table-layout: fixed;
         }
 
-        th {
-            background: #f8f9fa;
-            padding: 15px;
-            text-align: left;
-            border-bottom: 2px solid #eee;
-            color: #7f8c8d;
-            font-size: 0.7rem;
-            text-transform: uppercase;
-        }
-
+        th,
         td {
             padding: 15px;
             border-bottom: 1px solid #f0f0f0;
             word-wrap: break-word;
             font-size: 0.9rem;
-        }
-
-        th:nth-child(1),
-        td:nth-child(1) {
-            width: 14%;
-            font-family: monospace;
-            font-weight: bold;
-        }
-
-        th:nth-child(2),
-        td:nth-child(2) {
-            width: 16%;
-            color: #666;
-            font-size: 0.8rem;
-        }
-
-        th:nth-child(3),
-        td:nth-child(3) {
-            width: 5%;
             text-align: center;
         }
 
-        th:nth-child(4),
-        td:nth-child(4) {
-            width: 8%;
-            text-align: center;
-            font-weight: bold;
-        }
-
-        th:nth-child(5),
-        td:nth-child(5) {
-            width: 12%;
-            text-align: center;
-            color: #34495e;
-            font-weight: bold;
-        }
-
-        th:nth-child(6),
-        td:nth-child(6) {
-            width: 12%;
-            text-align: center;
-            color: #2980b9;
-            font-weight: bold;
-        }
-
-        th:nth-child(7),
-        td:nth-child(7) {
-            width: 10%;
-            text-align: center;
-        }
-
-        th:nth-child(8),
-        td:nth-child(8) {
-            width: 23%;
-            text-align: center;
-        }
+        /* Perfect Column Alignment */
+        .col-id { width: 12%; font-family: monospace; font-weight: bold; text-align: left; }
+        .col-time { width: 15%; color: #666; font-size: 0.8rem; }
+        .col-trials { width: 6%; }
+        .col-acc { width: 7%; font-weight: bold; }
+        .col-test { width: 11%; color: #34495e; font-weight: bold; }
+        .col-study { width: 11%; color: #2980b9; font-weight: bold; }
+        .col-dur { width: 10%; }
+        .col-actions { width: 28%; text-align: right; }
 
         .load-more-container {
             text-align: center;
@@ -222,8 +169,10 @@
     <div class="admin-container" id="main-dashboard" style="display: none;">
         <div class="dashboard-header">
             <div style="display: flex; align-items: center; gap: 15px;">
-                <img src="favicon.png" alt="Logo" style="width: 50px; height: 50px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
-                <h1 style="margin: 0;">Research Control Center <span id="status-badge" class="db-badge status-on">ONLINE</span></h1>
+                <img src="favicon.png" alt="Logo"
+                    style="width: 50px; height: 50px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.15);">
+                <h1 style="margin: 0;">Research Control Center <span id="status-badge"
+                        class="db-badge status-on">ONLINE</span></h1>
             </div>
             <button class="jspsych-btn" style="background: #e74c3c !important;"
                 onclick="window.location.href='index.html'">Logout to Test Site</button>
@@ -259,20 +208,21 @@
                     <input type="text" id="search-input" placeholder="Search IDs..." onkeyup="window.doSearch()"
                         style="width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd;">
                 </div>
-                <button class="jspsych-btn" style="background: var(--success) !important; margin-left: 20px;"
-                    onclick="window.doExport()">Download Master CSV</button>
+                <div style="display: flex; gap: 10px;">
+                    <button class="jspsych-btn" style="background: var(--success) !important;" onclick="window.doExport()">Download Master CSV</button>
+                </div>
             </div>
             <table>
                 <thead>
                     <tr>
-                        <th>ID</th>
-                        <th>Timestamp</th>
-                        <th>Trials</th>
-                        <th>Acc.</th>
-                        <th>TOTAL TEST (s)</th>
-                        <th>TOTAL STUDY (s)</th>
-                        <th>EXP. DUR.</th>
-                        <th>Device</th>
+                        <th class="col-id">ID</th>
+                        <th class="col-time">Timestamp</th>
+                        <th class="col-trials">Trials</th>
+                        <th class="col-acc">Acc.</th>
+                        <th class="col-test">Total Test</th>
+                        <th class="col-study">Total Study</th>
+                        <th class="col-dur">Exp. Dur.</th>
+                        <th class="col-actions">Device / Actions</th>
                     </tr>
                 </thead>
                 <tbody id="results-body"></tbody>
@@ -330,7 +280,7 @@
                 `).join('');
                 document.getElementById('st-rules').innerText = `${active.length} / ${RULES_DB.length}`;
                 await window.loadMore(true);
-            } catch (err) { console.error(err); }
+            } catch (err) { console.error("StartSync Error:", err); }
         };
 
         window.loadMore = async function (isInitial = false) {
@@ -338,53 +288,83 @@
                 document.getElementById('results-body').innerHTML = "";
                 allParticipants = [];
                 lastDoc = null;
+                document.getElementById('load-more-btn').disabled = false;
+                document.getElementById('load-more-btn').innerText = "Load More Records";
             }
-            let q = query(collection(db, "results"), orderBy("timestamp", "desc"), limit(50));
-            if (lastDoc) q = query(collection(db, "results"), orderBy("timestamp", "desc"), startAfter(lastDoc), limit(50));
-            const snap = await getDocs(q);
-            if (snap.empty) {
-                document.getElementById('load-more-btn').innerText = "No More Records";
-                document.getElementById('load-more-btn').disabled = true;
-                return;
+            try {
+                let q = query(collection(db, "results"), limit(100));
+                if (lastDoc) q = query(collection(db, "results"), startAfter(lastDoc), limit(100));
+                
+                const snap = await getDocs(q);
+                if (snap.empty) {
+                    if (isInitial) document.getElementById('results-body').innerHTML = "<tr><td colspan='8'>No records found in database.</td></tr>";
+                    document.getElementById('load-more-btn').innerText = "All Records Loaded";
+                    document.getElementById('load-more-btn').disabled = true;
+                    return;
+                }
+
+                lastDoc = snap.docs[snap.docs.length - 1];
+                const newBatch = [];
+                snap.forEach(d => newBatch.push(d.data()));
+
+                // GUARANTEED SORT: Newest at the top
+                allParticipants = [...allParticipants, ...newBatch].sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                // Redraw table
+                const body = document.getElementById('results-body');
+                body.innerHTML = "";
+                allParticipants.forEach(p => renderRow(p));
+                updateStats();
+            } catch (err) {
+                console.error("Load Error:", err);
             }
-            lastDoc = snap.docs[snap.docs.length - 1];
-            snap.forEach(d => {
-                const data = d.data();
-                allParticipants.push(data);
-                renderRow(data);
-            });
-            updateStats();
         };
 
         function renderRow(data) {
-            const body = document.getElementById('results-body');
             const acc = (data.overall_accuracy !== undefined) ? (data.overall_accuracy * 100).toFixed(1) : "0.0";
-
-            // Total Test RT (Sum of all trials or use pre-calculated overall_rt)
             const testSec = ((data.overall_rt || 0) / 1000).toFixed(1) + "s";
-
-            // Total Learning/Study RT
             let totalStudySec = "0.0s";
             if (data.trials) {
                 const sumMs = data.trials.reduce((acc, t) => acc + (t.learning_rt || 0), 0);
                 totalStudySec = (sumMs / 1000).toFixed(1) + "s";
             }
+            const deviceLabel = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(data.device || "") ? "📱" : "💻";
+            const safeId = (data.participant_id || "unk").replace(/['"]/g, "");
 
-            const deviceLabel = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(data.device || "") ? "📱 Mob" : "💻 Desk";
-
-            body.innerHTML += `
+            document.getElementById('results-body').innerHTML += `
                 <tr>
-                    <td>${data.participant_id}</td>
-                    <td>${new Date(data.timestamp).toLocaleString()}</td>
-                    <td>${data.trials ? data.trials.length : 0}</td>
-                    <td style="color: ${acc > 70 ? 'var(--success)' : '#e67e22'}">${acc}%</td>
-                    <td>${testSec}</td>
-                    <td>${totalStudySec}</td>
-                    <td><b>${(data.total_duration_sec || 0).toFixed(1)}s</b></td>
-                    <td><small>${deviceLabel}</small></td>
+                    <td class="col-id">${safeId}</td>
+                    <td class="col-time">${data.timestamp ? new Date(data.timestamp).toLocaleString() : 'N/A'}</td>
+                    <td class="col-trials">${data.trials ? data.trials.length : 0}</td>
+                    <td class="col-acc" style="color: ${acc > 70 ? 'var(--success)' : '#e67e22'}">${acc}%</td>
+                    <td class="col-test">${testSec}</td>
+                    <td class="col-study">${totalStudySec}</td>
+                    <td class="col-dur"><b>${(data.total_duration_sec || 0)}s</b></td>
+                    <td class="col-actions">
+                        <small style="color:#888;">${deviceLabel}</small>
+                        <button class="jspsych-btn" style="padding: 4px 10px; font-size: 11px; background: #9b59b6 !important; margin-left:10px;" 
+                            onclick="window.downloadRaw('${safeId}')">Raw JSON</button>
+                    </td>
                 </tr>
             `;
         }
+
+        window.downloadRaw = (participantId) => {
+            const p = allParticipants.find(part => part.participant_id === participantId);
+            if (!p || !p.raw_jspsych_data) {
+                alert("No raw data available for this record.");
+                return;
+            }
+            try {
+                const blob = new Blob([p.raw_jspsych_data], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `raw_data_${participantId}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            } catch (e) { console.error("Download Error:", e); }
+        };
 
         window.reCount = () => {
             const num = document.querySelectorAll('.r-check:checked').length;
@@ -404,7 +384,7 @@
         };
 
         window.doExport = () => {
-            const h = ["participant_id", "study_id", "session_id", "timestamp", "device", "total_duration", "rule_id", "accuracy", "test_rt", "learning_rt", "examples", "tests", "responses"];
+            const h = ["participant_id", "study_id", "session_id", "timestamp", "device", "resolution", "total_duration", "instructions_time", "rule_id", "accuracy", "hits", "false_alarms", "misses", "correct_rejections", "test_rt", "learning_rt", "examples", "tests", "responses", "correct_responses"];
             const rows = [];
             allParticipants.forEach(p => {
                 if (p.trials) p.trials.forEach(t => {
@@ -412,21 +392,29 @@
                     const examples = formatField(t.example_items);
                     const tests = formatField(t.test_items_list);
                     const responses = Array.isArray(t.participant_responses) ? t.participant_responses.join('|') : ((t.participant_responses === undefined || t.participant_responses === "") ? "NO_RESPONSE" : t.participant_responses);
-                    
+                    const correct_resp = t.correct_responses || "MISSING";
+
                     rows.push([
                         p.participant_id,
                         p.study_id || "NONE",
                         p.session_id || "NONE",
-                        p.timestamp, 
-                        `"${p.device || 'unk'}"`, 
-                        (p.total_duration_sec || 0).toFixed(2),
-                        t.rule_id, 
-                        (t.accuracy !== undefined ? t.accuracy : 0).toFixed(2), 
-                        t.test_rt || t.rt || 0, 
-                        t.learning_rt || 0, 
-                        examples, 
-                        tests, 
-                        responses
+                        p.timestamp,
+                        '"' + (p.device || 'unk').replace(/"/g, '""') + '"',
+                        p.resolution || "UNKNOWN",
+                        (parseFloat(p.total_duration_sec) || 0).toFixed(2),
+                        p.instructions_duration_ms || 0,
+                        t.rule_id,
+                        (t.accuracy !== undefined ? t.accuracy : 0).toFixed(2),
+                        t.hits || 0,
+                        t.false_alarms || 0,
+                        t.misses || 0,
+                        t.correct_rejections || 0,
+                        t.test_rt || t.rt || 0,
+                        t.learning_rt || 0,
+                        examples,
+                        tests,
+                        responses,
+                        correct_resp
                     ]);
                 });
             });

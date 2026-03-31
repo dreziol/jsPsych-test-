@@ -33,10 +33,10 @@ async function runExperiment() {
   // Initialize jsPsych
   const jsPsych = initJsPsych({
     show_progress_bar: true,
-    on_finish: function() {
-       if (CONFIG.DATA_PIPE_ID !== "CLOUDSYNC") {
-          jsPsych.data.get().localSave('csv', `backup_${PARTICIPANT_ID}.csv`);
-       }
+    on_finish: function () {
+      if (CONFIG.DATA_PIPE_ID !== "CLOUDSYNC") {
+        jsPsych.data.get().localSave('csv', `backup_${PARTICIPANT_ID}.csv`);
+      }
     }
   });
 
@@ -51,16 +51,17 @@ async function runExperiment() {
       const activeIDs = configDoc.data().active_rules;
       if (activeIDs && activeIDs.length > 0) {
         activeRulesPool = RULES_DB.filter(r => activeIDs.includes(r.id));
+        if (activeRulesPool.length === 0) activeRulesPool = [...RULES_DB]; // Failsafe
       }
     }
   } catch (e) {
-    console.warn("Cloud config unreachable.");
+    console.warn("Cloud config unreachable. Defaulting to all rules.");
   }
 
   setRandomSeed(Math.floor(Math.random() * 2147483647));
   shuffle(activeRulesPool);
 
-  let experimentStartTime = 0;
+
 
   const timeline = [];
   timeline.push({ type: jsPsychPreload, images: ALL_ITEMS.map(item => `stimuli/${item.id}.svg`) });
@@ -79,7 +80,9 @@ async function runExperiment() {
       </div>
     `,
     choices: ['Begin Task'],
-    on_load: () => { experimentStartTime = performance.now(); }
+    on_finish: function(data) {
+      window.instructions_rt = (window.instructions_rt || 0) + data.rt;
+    }
   });
 
   timeline.push({
@@ -91,15 +94,22 @@ async function runExperiment() {
         <p><strong>Your Goal:</strong> Infer the logic/rule that determines whether an object "BELONGS" to the group.</p>
       </div>
     `,
-    choices: ['Start Experiment']
+    choices: ['Start Experiment'],
+    on_finish: function(data) {
+      window.instructions_rt = (window.instructions_rt || 0) + data.rt;
+    }
   });
 
   let lastLearningRT = 0;
-  let pageStartTime = 0;
 
-  // Generate Blocks
+  // Generate Blocks (Shuffle-queue: guarantees diverse rules before repeating)
+  let ruleQueue = [];
   for (let i = 0; i < CONFIG.NUM_TRIALS; i++) {
-    const selectedRule = activeRulesPool[Math.floor(seedableRandom() * activeRulesPool.length)];
+    if (ruleQueue.length === 0) {
+      ruleQueue = [...activeRulesPool];
+      shuffle(ruleQueue);
+    }
+    const selectedRule = ruleQueue.pop();
     const trialSamples = generateTrialData(selectedRule, ALL_ITEMS);
 
     // 1. LEARNING PHASE
@@ -118,9 +128,8 @@ async function runExperiment() {
         `;
       },
       choices: ['Continue to Test'],
-      on_load: () => { pageStartTime = performance.now(); },
       on_finish: (data) => {
-        lastLearningRT = performance.now() - pageStartTime;
+        lastLearningRT = data.rt; // jsPsych native timing
       }
     });
 
@@ -138,7 +147,6 @@ async function runExperiment() {
       },
       choices: ['Submit Answers'],
       on_load: () => {
-        pageStartTime = performance.now();
         window.selectedIds = [];
         // Disable submit button by default
         const btn = document.getElementById('jspsych-html-button-response-button-0');
@@ -151,7 +159,7 @@ async function runExperiment() {
         window.toggleSelection = (el) => {
           const id = parseInt(el.getAttribute('data-id'));
           if (!window.selectedIds) window.selectedIds = [];
-          
+
           const idx = window.selectedIds.indexOf(id);
           if (idx === -1) {
             window.selectedIds.push(id);
@@ -171,25 +179,43 @@ async function runExperiment() {
         };
       },
       on_finish: (data) => {
-        const testRT = performance.now() - pageStartTime;
+        const testRT = data.rt; // jsPsych native timing
         const selections = window.selectedIds || [];
         const correctLabels = trialSamples.testItems.map(item => selectedRule.evaluate(item));
         const totalTargets = correctLabels.filter(l => l === true).length;
-        
+
         let hits = 0;
         let falseAlarms = 0;
+        let misses = 0;
+        let correctRejections = 0;
 
         trialSamples.testItems.forEach((item, idx) => {
           const selected = selections.includes(item.id);
           const isTarget = correctLabels[idx];
 
           if (isTarget && selected) hits++;
-          if (!isTarget && selected) falseAlarms++;
+          else if (!isTarget && selected) falseAlarms++;
+          else if (isTarget && !selected) misses++;
+          else if (!isTarget && !selected) correctRejections++;
         });
 
         // Accuracy = (Hits - FalseAlarms) / TotalTargets (capped at 0-1)
-        // Safety check to prevent NaN if no targets are in the set
         const trialAccuracy = totalTargets === 0 ? 0 : Math.max(0, (hits - falseAlarms) / totalTargets);
+
+        const correctIds = trialSamples.testItems.filter((_, i) => correctLabels[i]).map(item => item.id);
+        const exampleIds = trialSamples.trainingPos.map(i => i.id).concat(trialSamples.trainingNeg.map(i => i.id));
+
+        // ENSURE DATA PERSISTS IN RAW JSPSYCH POOL
+        data.rule_id = selectedRule.id;
+        data.accuracy = trialAccuracy;
+        data.participant_responses = selections.join('|');
+        data.correct_responses = correctIds.join('|');
+        data.example_items = exampleIds.join('|');
+        data.hits = hits;
+        data.false_alarms = falseAlarms;
+        data.misses = misses;
+        data.correct_rejections = correctRejections;
+        data.correct_count = hits;
 
         // ACCUMULATE IN MASTER ARRAY
         masterTrialData.push({
@@ -200,9 +226,14 @@ async function runExperiment() {
           total_items: trialSamples.testItems.length,
           test_rt: testRT,
           learning_rt: lastLearningRT,
-          example_items: trialSamples.trainingPos.map(i => i.id).concat(trialSamples.trainingNeg.map(i => i.id)).join('|'),
+          example_items: data.example_items,
           test_items_list: trialSamples.testItems.map(i => i.id).join('|'),
-          participant_responses: selections.join('|')
+          participant_responses: data.participant_responses,
+          correct_responses: data.correct_responses,
+          hits: hits,
+          false_alarms: falseAlarms,
+          misses: misses,
+          correct_rejections: correctRejections
         });
 
         lastLearningRT = 0;
@@ -210,29 +241,38 @@ async function runExperiment() {
     });
   }
 
-    // 4. CLOUD SYNC PHASE
+  // 4. CLOUD SYNC PHASE
   timeline.push({
     type: jsPsychHtmlButtonResponse,
     stimulus: "<h1>Saving Data...</h1><p>Please wait...</p>",
     choices: [],
     on_load: async () => {
+      const avgAcc = masterTrialData.length > 0 ? (masterTrialData.reduce((acc, val) => acc + val.accuracy, 0) / masterTrialData.length) : 0;
+      const totalTestRT = masterTrialData.reduce((acc, val) => acc + (val.test_rt || 0), 0);
+
       const cleanedPackage = {
         participant_id: PARTICIPANT_ID,
         study_id: STUDY_ID,
         session_id: SESSION_ID,
         timestamp: new Date().toISOString(),
         device: navigator.userAgent,
-        overall_accuracy: masterTrialData.reduce((acc, val) => acc + val.accuracy, 0) / masterTrialData.length,
-        overall_rt: masterTrialData.reduce((acc, val) => acc + val.test_rt, 0),
-        total_duration_sec: (performance.now() - experimentStartTime) / 1000,
+        resolution: `${window.innerWidth}x${window.innerHeight}`,
+        total_duration_sec: parseFloat((jsPsych.getTotalTime() / 1000).toFixed(2)),
+        instructions_duration_ms: parseInt((window.instructions_rt || 0).toFixed(0)),
+        overall_accuracy: parseFloat(avgAcc.toFixed(4)),
+        overall_rt: totalTestRT,
+        raw_jspsych_data: jsPsych.data.get().json(),
         trials: masterTrialData
       };
 
+      console.log("Attempting to sync payload:", cleanedPackage);
+
       try {
         await addDoc(collection(db, "results"), cleanedPackage);
+        console.log("✓ Cloud Sync Successful!");
         jsPsych.finishTrial();
       } catch (e) {
-        console.error("Cloud failure.", e);
+        console.error("CRITICAL: Cloud sync failed.", e);
         jsPsych.finishTrial();
       }
     }
