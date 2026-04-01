@@ -10,12 +10,12 @@ import { getFirestore, doc, getDoc, setDoc, addDoc, collection, getDocs, query, 
 
 // Linked Firebase Config
 const firebaseConfig = {
-  apiKey: "AIzaSyCMxzpCz9cZhPm_iR_-QqLYarTM6GEQalc",
-  authDomain: "test-75c1d.firebaseapp.com",
+  apiKey: "8888888888888888888888",
+  authDomain: "test-78com",
   projectId: "test-75c1d",
-  storageBucket: "test-75c1d.firebasestorage.app",
-  messagingSenderId: "710473477441",
-  appId: "1:710473477441:web:062998efdc8f3dae49c5c0"
+  storageBucket: "test-88888888rage.app",
+  messagingSenderId: "88888888888888",
+  appId: "1:710478888888888ae49c5c0"
 };
 
 // Initialize Firebase
